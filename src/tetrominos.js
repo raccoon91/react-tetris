@@ -65,3 +65,11 @@ export const randomTetromino = () => {
 
   return TETROMINOS[randomTetromino];
 };
+
+const tetrominos = 'IJLOSTZ';
+// eslint-disable-next-line no-shadow
+export const tetrominoLists = [];
+
+for (let i = 0; i < 10; i += 1) {
+  tetrominoLists.push(tetrominos[Math.floor(Math.random() * tetrominos.length)]);
+}

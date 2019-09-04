@@ -8,20 +8,28 @@ import { useInterval } from '../hooks/useInterval';
 import { usePlayer } from '../hooks/usePlayer';
 import { useStage } from '../hooks/useStage';
 import { useGameStatus } from '../hooks/useGameStatus';
+import { useNextTetromino } from '../hooks/useNextTetromino';
 
 import Stage from './Stage';
 import Display from './Display';
 import StartButton from './StartButton';
+import DisplayNextTetromino from './DisplayNextTetromino';
 
 const Tetris = () => {
   const [dropTime, setDropTime] = useState(null);
   const [gameOver, setGameOver] = useState(false);
 
-  const [player, updatePlayerPos, resetPlayer, playerRotate] = usePlayer();
+  const [nextTetromino, tetrominoLists, updateTetromino] = useNextTetromino();
+  const [player, updatePlayerPos, resetPlayer, playerRotate] = usePlayer(
+    nextTetromino,
+    updateTetromino
+  );
   const [stage, setStage, rowsCleared] = useStage(player, resetPlayer);
-  const [score, setScore, rows, setRows, level, setLevel] = useGameStatus(rowsCleared);
+  const [score, setScore, rows, setRows, level, setLevel, pause, setPause] = useGameStatus(
+    rowsCleared
+  );
 
-  console.log('re-render');
+  // console.log('re-render');
 
   const movePlayer = (dir) => {
     if (!checkCollision(player, stage, { x: dir, y: 0 })) {
@@ -77,6 +85,38 @@ const Tetris = () => {
     drop();
   };
 
+  const forceDrop = () => {
+    let index = 1;
+    setDropTime(null);
+
+    while (!checkCollision(player, stage, { x: 0, y: index })) {
+      index += 1;
+    }
+
+    if (rows > (level + 1) * 10) {
+      setLevel((prev) => prev + 1);
+    }
+
+    if (index < 0) {
+      console.log('Game Over');
+      setGameOver(true);
+      setDropTime(null);
+    }
+
+    updatePlayerPos({ x: 0, y: index - 1, collided: true });
+    setDropTime(1000 / (level + 1) + 200);
+  };
+
+  const pauseGame = () => {
+    if (pause) {
+      setPause(false);
+      setDropTime(1000 / (level + 1) + 200);
+    } else {
+      setPause(true);
+      setDropTime(null);
+    }
+  };
+
   const move = ({ keyCode }) => {
     if (!gameOver) {
       if (keyCode === 37) {
@@ -87,6 +127,12 @@ const Tetris = () => {
         dropPlayer();
       } else if (keyCode === 38) {
         playerRotate(stage, 1);
+      } else if (keyCode === 16) {
+        setTimeout(forceDrop, 0);
+      } else if (keyCode === 32) {
+        startGame();
+      } else if (keyCode === 80) {
+        pauseGame();
       }
     }
   };
@@ -96,8 +142,17 @@ const Tetris = () => {
   }, dropTime);
 
   return (
-    <StyledTetrisWrapper role="button" tabIndex="0" onKeyDown={(e) => move(e)} onKeyUp={keyUp}>
+    <StyledTetrisWrapper
+      role="button"
+      tabIndex="0"
+      onKeyDown={(e) => move(e)}
+      onKeyUp={keyUp}
+    >
       <StyledTetris>
+        <DisplayNextTetromino
+          nextTetromino={nextTetromino}
+          tetrominoLists={tetrominoLists}
+        />
         <Stage stage={stage} />
         <aside>
           {gameOver ? (
